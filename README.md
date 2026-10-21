@@ -8,7 +8,7 @@ Plataforma web para optimizar la gestión del Texto Único de Procedimientos Adm
 
 ```
 Proyecto_Desarrollo/
-├── 01_Plan_Proyecto/        # Entrega 01 — Plan de proyecto (MD + Word)
+├── 01_Plan_Proyecto/        # Entrega 01 — Plan de proyecto (MD + Word + prototipo dinámico)
 ├── backend/                 # API REST (Node.js + Express)
 │   ├── src/
 │   │   ├── index.js         # Punto de entrada
@@ -27,7 +27,7 @@ Proyecto_Desarrollo/
 ├── database/
 │   ├── schema.sql           # Esquema PostgreSQL
 │   └── diagrama_ER.md       # Diagrama entidad-relación (Mermaid)
-└── docs/                    # Documentación del proyecto
+└── docs/                    # Manual de usuario, manual técnico, avance y despliegue
 ```
 
 ## Requisitos
@@ -93,4 +93,8 @@ npm test           # 15 pruebas (auth, trámites, reportes)
 
 Scrum (sprints), arquitectura MVC con API REST, implementación modular, control de versiones en GitHub.
 
-Más documentación en [`docs/`](docs/).
+Más documentación en [`docs/`](docs/): manual de usuario, manual técnico, avance del proyecto y guía de despliegue en la nube (Render + Vercel + Neon).
+
+## Despliegue
+
+Configuración incluida: `render.yaml` (backend), `frontend/vercel.json` (frontend). Definir `DATABASE_URL` para usar PostgreSQL en producción; sin ella, la API funciona con datos de demostración en memoria. Guía completa: `docs/despliegue.md`.

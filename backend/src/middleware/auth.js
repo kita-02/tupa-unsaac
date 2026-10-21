@@ -1,15 +1,15 @@
-import jwt from "jsonwebtoken";
-import { store } from "../store.js";
+import { repo } from "../repo/index.js";
 
 export const JWT_SECRET = process.env.JWT_SECRET || "tupa-unsaac-secret-dev";
 
-export function auth(req, res, next) {
+export async function auth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: "Token no proporcionado" });
   try {
+    const { default: jwt } = await import("jsonwebtoken");
     const payload = jwt.verify(token, JWT_SECRET);
-    const user = store.user(payload.id);
+    const user = await repo.users.findById(payload.id);
     if (!user) return res.status(401).json({ error: "Usuario no encontrado" });
     req.user = { id: user.id, email: user.email, full_name: user.full_name, role: user.role, office_id: user.office_id };
     next();

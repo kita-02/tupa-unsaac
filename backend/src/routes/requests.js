@@ -3,8 +3,9 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { fileURLToPath } from "url";
-import { store } from "../store.js";
+import { repo } from "../repo/index.js";
 import { auth, requireRole } from "../middleware/auth.js";
+import { sendEmail } from "../mailer.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(__dirname, "../../uploads");
@@ -25,108 +26,130 @@ const STATE_LABELS = {
   approved: "Aprobada", rejected: "Rechazada", delivered: "Entregada",
 };
 
-const fullRequest = (r) => {
-  const proc = store.procedure(r.procedure_id);
-  const user = store.user(r.user_id);
+async function fullRequest(r) {
+  const proc = await repo.procedures.findById(r.procedure_id);
+  const user = await repo.users.findById(r.user_id);
   return {
     ...r,
     state_label: STATE_LABELS[r.state],
     procedure_name: proc?.name,
     procedure_code: proc?.code,
     procedure_cost: proc?.cost,
-    office_name: store.officeName(proc?.office_id),
+    office_name: proc ? (await repo.offices.name(proc.office_id)) : null,
     user_name: user?.full_name,
     user_email: user?.email,
     user_code: user?.code,
-    documents: store.db.documents.filter((d) => d.request_id === r.id),
-    history: store.db.history.filter((h) => h.request_id === r.id).sort((a, b) => a.created_at - b.created_at),
+    documents: await repo.documents.listByRequest(r.id),
+    history: await repo.history.listByRequest(r.id),
   };
-};
+}
 
-router.get("/", auth, (req, res) => {
-  let list = store.db.requests;
-  if (req.user.role === "student") list = list.filter((r) => r.user_id === req.user.id);
-  list = [...list].sort((a, b) => b.created_at - a.created_at);
-  res.json(list.map(fullRequest));
+router.get("/", auth, async (req, res) => {
+  try {
+    const list = await repo.requests.list(req.user.role === "student" ? { userId: req.user.id } : {});
+    res.json(await Promise.all(list.map(fullRequest)));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al listar solicitudes" });
+  }
 });
 
-router.get("/:id", auth, (req, res) => {
-  const r = store.request(Number(req.params.id));
-  if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
-  if (req.user.role === "student" && r.user_id !== req.user.id)
-    return res.status(403).json({ error: "No tiene acceso a esta solicitud" });
-  res.json(fullRequest(r));
+router.get("/:id", auth, async (req, res) => {
+  try {
+    const r = await repo.requests.findById(req.params.id);
+    if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
+    if (req.user.role === "student" && r.user_id !== req.user.id)
+      return res.status(403).json({ error: "No tiene acceso a esta solicitud" });
+    res.json(await fullRequest(r));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al obtener solicitud" });
+  }
 });
 
-router.post("/", auth, requireRole("student"), (req, res) => {
-  const { procedure_id, motivo, data } = req.body;
-  const proc = store.procedure(Number(procedure_id));
-  if (!proc || !proc.is_active) return res.status(404).json({ error: "Procedimiento no encontrado" });
+router.post("/", auth, requireRole("student"), async (req, res) => {
+  try {
+    const { procedure_id, motivo, data } = req.body;
+    const proc = await repo.procedures.findById(procedure_id);
+    if (!proc || !proc.is_active) return res.status(404).json({ error: "Procedimiento no encontrado" });
 
-  const r = {
-    id: store.nextId(store.db.requests),
-    code: store.newTramCode(),
-    user_id: req.user.id,
-    procedure_id: proc.id,
-    state: "submitted",
-    data: { motivo: motivo || "", ...(data || {}) },
-    observations: null,
-    created_at: store.now(),
-    updated_at: store.now(),
-  };
-  store.db.requests.push(r);
-  store.addHistory(r.id, null, "submitted", req.user.id, "Solicitud registrada");
-  store.notify(r.user_id, r.id, "Solicitud registrada", `Su solicitud ${r.code} (${proc.name}) fue registrada correctamente y está pendiente de revisión.`);
-  store.notify(2, r.id, "Nueva solicitud", `Nueva solicitud ${r.code} de ${proc.name} pendiente de revisión.`);
-  res.status(201).json(fullRequest(r));
+    const r = await repo.requests.create({
+      user_id: req.user.id,
+      procedure_id: proc.id,
+      data: { motivo: motivo || "", ...(data || {}) },
+    });
+    await repo.history.create({ request_id: r.id, from_state: null, to_state: "submitted", changed_by: req.user.id, comment: "Solicitud registrada" });
+    await repo.notifications.create({ user_id: r.user_id, request_id: r.id, title: "Solicitud registrada", message: `Su solicitud ${r.code} (${proc.name}) fue registrada correctamente y está pendiente de revisión.` });
+    res.status(201).json(await fullRequest(r));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al registrar solicitud" });
+  }
 });
 
-router.patch("/:id/status", auth, requireRole("office", "admin"), (req, res) => {
-  const r = store.request(Number(req.params.id));
-  if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
-  const { state, observations } = req.body;
-  if (!VALID_STATES.includes(state)) return res.status(400).json({ error: "Estado inválido" });
-  if (state === "observed" && !observations) return res.status(400).json({ error: "Debe indicar las observaciones" });
+router.patch("/:id/status", auth, requireRole("office", "admin"), async (req, res) => {
+  try {
+    const r = await repo.requests.findById(req.params.id);
+    if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
+    const { state, observations } = req.body;
+    if (!VALID_STATES.includes(state)) return res.status(400).json({ error: "Estado inválido" });
+    if (state === "observed" && !observations) return res.status(400).json({ error: "Debe indicar las observaciones" });
 
-  const from = r.state;
-  r.state = state;
-  r.observations = observations || r.observations;
-  r.updated_at = store.now();
-  store.addHistory(r.id, from, state, req.user.id, observations || `Cambio de estado a ${STATE_LABELS[state]}`);
-  const proc = store.procedure(r.procedure_id);
-  store.notify(r.user_id, r.id, `Solicitud ${STATE_LABELS[state].toLowerCase()}`, `Su solicitud ${r.code} (${proc?.name}) ahora está: ${STATE_LABELS[state].toUpperCase()}.${observations ? " Observaciones: " + observations : ""}`);
-  res.json(fullRequest(r));
+    const from = r.state;
+    const updated = await repo.requests.update(r.id, { state, observations: observations || r.observations });
+    await repo.history.create({ request_id: r.id, from_state: from, to_state: state, changed_by: req.user.id, comment: observations || `Cambio de estado a ${STATE_LABELS[state]}` });
+
+    const proc = await repo.procedures.findById(r.procedure_id);
+    const message = `Su solicitud ${r.code} (${proc?.name}) ahora está: ${STATE_LABELS[state].toUpperCase()}.${observations ? " Observaciones: " + observations : ""}`;
+    await repo.notifications.create({ user_id: r.user_id, request_id: r.id, title: `Solicitud ${STATE_LABELS[state].toLowerCase()}`, message });
+
+    const owner = await repo.users.findById(r.user_id);
+    if (owner?.email) sendEmail(owner.email, `TUPA UNSAAC — Solicitud ${STATE_LABELS[state].toLowerCase()}`, message);
+
+    res.json(await fullRequest(updated));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al actualizar estado" });
+  }
 });
 
-router.post("/:id/documents", auth, requireRole("student", "office", "admin"), upload.single("file"), (req, res) => {
-  const r = store.request(Number(req.params.id));
-  if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
-  if (req.user.role === "student" && r.user_id !== req.user.id)
-    return res.status(403).json({ error: "No tiene acceso a esta solicitud" });
-  if (!req.file) return res.status(400).json({ error: "Archivo no recibido" });
+router.post("/:id/documents", auth, requireRole("student", "office", "admin"), upload.single("file"), async (req, res) => {
+  try {
+    const r = await repo.requests.findById(req.params.id);
+    if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
+    if (req.user.role === "student" && r.user_id !== req.user.id)
+      return res.status(403).json({ error: "No tiene acceso a esta solicitud" });
+    if (!req.file) return res.status(400).json({ error: "Archivo no recibido" });
 
-  const doc = {
-    id: store.nextId(store.db.documents),
-    request_id: r.id,
-    doc_name: req.file.originalname,
-    file_path: req.file.path,
-    file_size: req.file.size,
-    verified: false,
-    verified_by: null,
-    created_at: store.now(),
-  };
-  store.db.documents.push(doc);
-  res.status(201).json(doc);
+    const doc = await repo.documents.create({
+      request_id: r.id,
+      doc_name: req.file.originalname,
+      file_path: req.file.path,
+      file_size: req.file.size,
+    });
+    res.status(201).json(doc);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al subir documento" });
+  }
 });
 
-router.patch("/:id/documents/:docId", auth, requireRole("office", "admin"), (req, res) => {
-  const r = store.request(Number(req.params.id));
-  if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
-  const doc = store.db.documents.find((d) => d.id === Number(req.params.docId) && d.request_id === r.id);
-  if (!doc) return res.status(404).json({ error: "Documento no encontrado" });
-  doc.verified = Boolean(req.body.verified);
-  doc.verified_by = doc.verified ? req.user.id : null;
-  res.json(doc);
+router.patch("/:id/documents/:docId", auth, requireRole("office", "admin"), async (req, res) => {
+  try {
+    const r = await repo.requests.findById(req.params.id);
+    if (!r) return res.status(404).json({ error: "Solicitud no encontrada" });
+    const docs = await repo.documents.listByRequest(r.id);
+    const doc = docs.find((d) => d.id === Number(req.params.docId));
+    if (!doc) return res.status(404).json({ error: "Documento no encontrado" });
+    const updated = await repo.documents.update(doc.id, {
+      verified: Boolean(req.body.verified),
+      verified_by: req.body.verified ? req.user.id : null,
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al verificar documento" });
+  }
 });
 
 export { STATE_LABELS };

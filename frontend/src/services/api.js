@@ -1,4 +1,4 @@
-const API = "/api";
+const API = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL.replace(/\/$/, "")}/api` : "/api";
 
 const token = () => localStorage.getItem("token");
 
@@ -35,5 +35,5 @@ export const api = {
   createProcedure: (data) => req("/procedures", { method: "POST", body: data }),
   updateProcedure: (id, data) => req(`/procedures/${id}`, { method: "PUT", body: data }),
   deleteProcedure: (id) => req(`/procedures/${id}`, { method: "DELETE" }),
-  csvUrl: "/api/reports/export",
+  csvUrl: `${API}/reports/export`,
 };
