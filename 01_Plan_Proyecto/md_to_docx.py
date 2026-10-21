@@ -1,4 +1,5 @@
 import re
+import sys
 from pathlib import Path
 from docx import Document
 from docx.shared import Pt, Cm, RGBColor
@@ -6,8 +7,12 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 
-SRC = Path(r"C:\Users\User\Downloads\Proyecto_Desarrollo\01_Plan_Proyecto\Plan_Proyecto_TUPA_UNSAAC.md")
-OUT = SRC.with_suffix(".docx")
+if len(sys.argv) >= 2:
+    SRC = Path(sys.argv[1]).resolve()
+    OUT = Path(sys.argv[2]).resolve() if len(sys.argv) >= 3 else SRC.with_suffix(".docx")
+else:
+    SRC = Path(__file__).resolve().parent / "Plan_Proyecto_TUPA_UNSAAC.md"
+    OUT = SRC.with_suffix(".docx")
 
 def set_cell_bg(cell, color_hex):
     tcPr = cell._tc.get_or_add_tcPr()
