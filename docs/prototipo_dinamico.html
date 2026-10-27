@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototipo dinámico — Plataforma TUPA UNSAAC</title>
+<style>
+:root{
+  --navy:#14213d;--navy2:#1f3266;--accent:#c8553d;--accent2:#e07a5f;--bg:#f5f3ef;--card:#ffffff;
+  --ink:#1b1b1b;--muted:#6b6b6b;--line:#e4dfd6;--ok:#2a9d8f;--warn:#e9a23b;--bad:#c0392b;--info:#3d5a98;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+a{color:inherit}
+nav{background:var(--navy);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:10;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.3px}
+.brand .mk{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;font-weight:800}
+.brand small{display:block;font-weight:400;font-size:11px;opacity:.7}
+nav .links{display:flex;gap:6px;flex-wrap:wrap}
+nav button{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.25);padding:7px 12px;border-radius:999px;cursor:pointer;font-size:13px}
+nav button:hover,nav button.on{background:#fff;color:var(--navy)}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 20px 40px}
+.screen{display:none}.screen.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-size:34px;line-height:1.15}h2{font-size:24px;margin-bottom:6px}h3{font-size:16px;margin-bottom:6px}
+.sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+.hero{background:linear-gradient(120deg,var(--navy) 0%,var(--navy2) 60%,#3b2f63 100%);color:#fff;border-radius:22px;padding:44px 32px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:rgba(200,85,61,.35)}
+.hero p{opacity:.85;max-width:560px;margin:12px 0 22px}
+.search{display:flex;background:#fff;border-radius:14px;padding:6px;max-width:620px;position:relative;z-index:1}
+.search input{flex:1;border:none;outline:none;padding:12px 14px;font-size:15px;color:var(--ink);background:transparent}
+.btn{background:var(--accent);color:#fff;border:none;padding:11px 18px;border-radius:12px;font-weight:600;cursor:pointer;font-size:14px}
+.btn:hover{background:#b0472f}.btn.ghost{background:#efeae1;color:var(--ink)}.btn.ghost:hover{background:#e3dccf}
+.btn.ok{background:var(--ok)}.btn.warn{background:var(--warn)}.btn.bad{background:var(--bad)}.btn.info{background:var(--info)}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.card.click{cursor:pointer;transition:.15s}.card.click:hover{border-color:var(--accent2);box-shadow:0 6px 18px rgba(20,33,61,.08);transform:translateY(-2px)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:11.5px;padding:3px 9px;border-radius:999px;background:#efeae1;color:#4a4a4a;font-weight:600}
+.chip.ok{background:#dff3f0;color:#1d7268}.chip.warn{background:#fcefd6;color:#9a6512}.chip.bad{background:#f8dcd8;color:#922b20}.chip.info{background:#e1e7f5;color:#2c4278}
+.kpi b{display:block;font-size:28px;color:var(--navy)}.kpi span{font-size:13px;color:var(--muted)}
+.steps{display:flex;gap:6px;margin:6px 0 20px}
+.steps div{flex:1;text-align:center;font-size:12px;color:var(--muted);border-top:4px solid var(--line);padding-top:8px}
+.steps div.done{border-color:var(--ok);color:#1d7268;font-weight:600}.steps div.now{border-color:var(--accent);color:var(--accent);font-weight:700}
+label{display:block;font-weight:600;font-size:13px;margin:12px 0 5px}
+input.f,select.f,textarea.f{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff}
+input.f[readonly]{background:#f7f5f1;color:#555}
+.req{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.req:last-child{border-bottom:none}
+.timeline{position:relative;margin-left:10px;padding-left:22px;border-left:3px solid var(--line)}
+.tl{position:relative;padding:0 0 18px}
+.tl:before{content:"";position:absolute;left:-31px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--line);border:3px solid var(--bg)}
+.tl.done:before{background:var(--ok)}.tl.now:before{background:var(--accent);box-shadow:0 0 0 5px rgba(200,85,61,.2)}
+.tl b{font-size:14px}.tl p{font-size:13px;color:var(--muted)}
+.clock{display:flex;align-items:center;gap:14px}
+.ring{width:78px;height:78px;border-radius:50%;background:conic-gradient(var(--warn) 0 57%,#efeae1 57% 100%);display:grid;place-items:center}
+.ring span{width:58px;height:58px;border-radius:50%;background:#fff;display:grid;place-items:center;font-weight:800;color:var(--navy)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.bars .row{display:grid;grid-template-columns:170px 1fr 40px;gap:10px;align-items:center;font-size:13px;margin:8px 0}
+.bars .tr{height:12px;background:#efeae1;border-radius:6px;overflow:hidden}.bars .tr i{display:block;height:100%;background:var(--navy2);border-radius:6px}
+.phone{width:290px;background:#e7ddd3;border-radius:28px;padding:14px;border:8px solid #222;margin:0 auto}
+.phone .top{background:#075e54;color:#fff;margin:-14px -14px 12px;padding:12px 14px;border-radius:18px 18px 0 0;font-size:13px;font-weight:600}
+.bubble{background:#fff;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;margin-bottom:8px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.bubble small{display:block;text-align:right;color:#999;font-size:10.5px;margin-top:4px}
+.mail{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:13px}
+.mail .h{color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:8px}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
+.sw{width:44px;height:24px;border-radius:999px;background:var(--ok);position:relative;cursor:pointer;flex-shrink:0}
+.sw:after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+.sw.off{background:#cfc8bb}.sw.off:after{right:23px}
+.qr{width:120px;height:120px;background:
+ repeating-linear-gradient(90deg,#14213d 0 8px,transparent 8px 16px),repeating-linear-gradient(0deg,#14213d 0 8px,transparent 8px 16px);
+ background-blend-mode:multiply;border:8px solid #fff;outline:1px solid var(--line);border-radius:6px}
+.note{background:#fff7e8;border:1px solid #f1dcae;color:#7a5a12;border-radius:12px;padding:10px 14px;font-size:12.5px;margin-top:14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:.3s;z-index:50;max-width:90%}
+.toast:empty{display:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+.right{text-align:right}.mt{margin-top:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand"><div class="mk">T</div><div>TUPA Digital UNSAAC<small>Prototipo dinámico · datos de ejemplo</small></div></div>
+  <div class="links">
+    <button data-go="home" class="on">Inicio</button>
+    <button data-go="catalogo">Trámites</button>
+    <button data-go="seguimiento">Mi trámite</button>
+    <button data-go="avisos">Avisos</button>
+    <button data-go="login">Oficinas</button>
+    <button data-go="verificar">Verificar documento</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- 1. INICIO -->
+<section id="home" class="screen active">
+  <div class="hero">
+    <h1>Todos tus trámites del TUPA<br>en un solo lugar</h1>
+    <p>Consulta requisitos y costos, paga y presenta tu solicitud en el mismo flujo, y recibe avisos por correo o WhatsApp cada vez que tu trámite avance.</p>
+    <div class="search">
+      <input id="q1" placeholder="¿Qué quieres tramitar? Ej.: constancia, bachiller, convalidación…">
+      <button class="btn" onclick="buscar(document.getElementById('q1').value)">Buscar</button>
+    </div>
+  </div>
+  <h3 class="mt" style="margin-top:26px">Trámites más solicitados</h3>
+  <div class="grid g3 mt">
+    <div class="card click" onclick="go('detalle')"><h3>Constancia de matrícula</h3><div class="sub" style="margin:0">Unidad de Trámite Documentario</div><div class="chips"><span class="chip">S/ 16.00*</span><span class="chip ok">Aprobación automática</span></div></div>
+    <div class="card click" onclick="go('catalogo')"><h3>Certificado de estudios</h3><div class="sub" style="margin:0">Dirección de Servicios Académicos</div><div class="chips"><span class="chip">S/ 38.00*</span><span class="chip info">5 días hábiles</span></div></div>
+    <div class="card click" onclick="go('catalogo')"><h3>Grado de bachiller</h3><div class="sub" style="margin:0">Facultad → Consejo Universitario</div><div class="chips"><span class="chip">Evaluación previa</span><span class="chip info">30 días hábiles</span></div></div>
+  </div>
+  <div class="grid g3 mt">
+    <div class="card"><b style="color:var(--accent)">1 · Encuentra</b><p class="sub" style="margin:4px 0 0">Requisitos, costo y plazo legal de cada procedimiento.</p></div>
+    <div class="card"><b style="color:var(--accent)">2 · Paga y presenta</b><p class="sub" style="margin:4px 0 0">Sin adjuntar vouchers: el pago se valida en el mismo trámite.</p></div>
+    <div class="card"><b style="color:var(--accent)">3 · Recibe avisos</b><p class="sub" style="margin:4px 0 0">Te avisamos en qué oficina está y si debes corregir algo.</p></div>
+  </div>
+  <div class="note">* Montos y plazos de ejemplo para el prototipo. En la plataforma se cargan desde el TUPA vigente.</div>
+</section>
+
+<!-- 2. CATÁLOGO -->
+<section id="catalogo" class="screen">
+  <h2>Catálogo de procedimientos TUPA</h2>
+  <p class="sub">Escribe aunque tengas errores de tipeo: el buscador tolera palabras parecidas.</p>
+  <div class="search" style="border:1px solid var(--line);max-width:none">
+    <input id="q2" oninput="filtrar(this.value)" placeholder="Buscar procedimiento…">
+    <select class="f" style="width:auto;border:none" onchange="filtrar(document.getElementById('q2').value,this.value)">
+      <option value="">Todas las categorías</option><option>Constancias</option><option>Certificados</option><option>Grados y títulos</option><option>Matrícula</option>
+    </select>
+  </div>
+  <div id="lista" class="grid g2 mt"></div>
+</section>
+
+<!-- 3. DETALLE -->
+<section id="detalle" class="screen">
+  <button class="btn ghost sm" onclick="go('catalogo')">← Volver al catálogo</button>
+  <h2 style="margin-top:14px">Constancia de matrícula</h2>
+  <p class="sub">Acredita que el estudiante está matriculado en el semestre vigente.</p>
+  <div class="grid g4">
+    <div class="card kpi"><span>Costo</span><b>S/ 16.00</b></div>
+    <div class="card kpi"><span>Plazo legal</span><b>3 días</b><span>hábiles</span></div>
+    <div class="card kpi"><span>Calificación</span><b style="font-size:17px">Automática</b></div>
+    <div class="card kpi"><span>Oficina</span><b style="font-size:17px">Trámite Doc.</b></div>
+  </div>
+  <div class="grid g2 mt">
+    <div class="card">
+      <h3>Requisitos</h3>
+      <div class="req"><span>1. Solicitud (se genera automáticamente)</span><span class="chip ok">Automático</span></div>
+      <div class="req"><span>2. Pago por derecho de trámite</span><span class="chip ok">En el mismo flujo</span></div>
+      <div class="req"><span>3. Estar matriculado en el semestre</span><span class="chip ok">Se verifica solo</span></div>
+    </div>
+    <div class="card">
+      <h3>Ruta del trámite</h3>
+      <div class="timeline" style="margin-top:10px">
+        <div class="tl"><b>Mesa de partes virtual</b><p>Registro y validación del pago</p></div>
+        <div class="tl"><b>Unidad de Trámite Documentario</b><p>Emisión de la constancia</p></div>
+        <div class="tl"><b>Descarga con código QR</b><p>Documento verificable</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="mt right"><button class="btn" onclick="go('solicitud')">Iniciar este trámite →</button></div>
+</section>
+
+<!-- 4. SOLICITUD -->
+<section id="solicitud" class="screen">
+  <h2>Nueva solicitud · Constancia de matrícula</h2>
+  <div class="steps"><div id="s1" class="now">1 · Datos</div><div id="s2">2 · Pago</div><div id="s3">3 · Documentos</div><div id="s4">4 · Enviar</div></div>
+
+  <div id="p1" class="card">
+    <h3>Tus datos (se completan al iniciar sesión)</h3>
+    <div class="grid g2">
+      <div><label>Apellidos y nombres</label><input class="f" readonly value="Estudiante de Ejemplo"></div>
+      <div><label>Código de estudiante</label><input class="f" readonly value="200000"></div>
+      <div><label>Escuela profesional</label><input class="f" readonly value="Ingeniería Informática y de Sistemas"></div>
+      <div><label>Semestre</label><input class="f" readonly value="2026-II"></div>
+    </div>
+    <label>Motivo de la solicitud</label>
+    <select class="f"><option>Prácticas preprofesionales</option><option>Beca o crédito educativo</option><option>Trámite externo</option><option>Otro</option></select>
+    <div class="mt right"><button class="btn" onclick="paso(2)">Continuar →</button></div>
+  </div>
+
+  <div id="p2" class="card" style="display:none">
+    <h3>Pago del derecho de trámite: S/ 16.00</h3>
+    <p class="sub">Paga en línea o en agencia con el código generado. El sistema valida el pago, no necesitas subir el voucher.</p>
+    <div class="grid g2">
+      <div class="card" style="background:#f7f5f1"><b>Código de pago</b><div style="font-size:26px;font-weight:800;letter-spacing:2px;color:var(--navy);margin-top:6px">TUPA-48 271 905</div><p class="sub" style="margin:4px 0 0">Válido por 72 horas</p></div>
+      <div>
+        <label>¿Ya pagaste? Ingresa el número de operación</label>
+        <input class="f" id="op" placeholder="Ej.: 00123456">
+        <button class="btn info sm mt" onclick="validarPago()">Validar pago</button>
+        <p id="pagoOk" style="display:none;margin-top:10px" class="chip ok">✓ Pago confirmado: S/ 16.00</p>
+      </div>
+    </div>
+    <div class="mt row" style="justify-content:space-between"><button class="btn ghost" onclick="paso(1)">← Atrás</button><button class="btn" onclick="paso(3)">Continuar →</button></div>
+  </div>
+
+  <div id="p3" class="card" style="display:none">
+    <h3>Documentos</h3>
+    <p class="sub">Este procedimiento no exige documentos adicionales. Si el trámite los pidiera, se validan formato (PDF/JPG), tamaño (máx. 5 MB) y legibilidad antes de enviar.</p>
+    <div class="req"><span>Solicitud generada automáticamente</span><span class="chip ok">✓ Lista</span></div>
+    <div class="req"><span>Comprobante de pago</span><span class="chip ok">✓ Validado por el sistema</span></div>
+    <div class="req"><span>Documento adicional (opcional)</span><input type="file" style="font-size:12px"></div>
+    <div class="mt row" style="justify-content:space-between"><button class="btn ghost" onclick="paso(2)">← Atrás</button><button class="btn" onclick="paso(4)">Revisar y enviar →</button></div>
+  </div>
+
+  <div id="p4" class="card" style="display:none">
+    <h3>Confirma y envía</h3>
+    <div class="req"><span>Procedimiento</span><b>Constancia de matrícula</b></div>
+    <div class="req"><span>Pago</span><b>S/ 16.00 · confirmado</b></div>
+    <div class="req"><span>Plazo legal</span><b>3 días hábiles</b></div>
+    <div class="req"><span>Avisos</span><b>Correo y WhatsApp</b></div>
+    <div class="mt row" style="justify-content:space-between"><button class="btn ghost" onclick="paso(3)">← Atrás</button><button class="btn ok" onclick="enviar()">Enviar solicitud</button></div>
+  </div>
+</section>
+
+<!-- 5. CONFIRMACIÓN -->
+<section id="confirmacion" class="screen">
+  <div class="card" style="text-align:center;padding:40px">
+    <div style="width:70px;height:70px;border-radius:50%;background:#dff3f0;color:var(--ok);display:grid;place-items:center;font-size:36px;margin:0 auto">✓</div>
+    <h2 style="margin-top:16px">Solicitud registrada</h2>
+    <p class="sub">Tu número de expediente es</p>
+    <div style="font-size:30px;font-weight:800;color:var(--navy);letter-spacing:1px">EXP-2026-004851</div>
+    <p class="sub mt">Te enviamos la constancia de recepción a tu correo institucional y por WhatsApp.<br>Ya no necesitas entrar a revisar: te avisaremos cada vez que tu trámite avance.</p>
+    <div class="row" style="justify-content:center"><button class="btn" onclick="go('seguimiento')">Ver seguimiento</button><button class="btn ghost" onclick="go('avisos')">Ver el aviso enviado</button></div>
+  </div>
+</section>
+
+<!-- 6. SEGUIMIENTO -->
+<section id="seguimiento" class="screen">
+  <h2>EXP-2026-004812 · Certificado de estudios</h2>
+  <p class="sub">Estado actual: <span class="chip warn">Observado: requiere corrección</span></p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>¿Dónde está mi trámite?</h3>
+      <div class="timeline" style="margin-top:12px">
+        <div class="tl done"><b>Registrado y pago confirmado</b><p>20/10/2026 09:14 · Mesa de partes virtual</p></div>
+        <div class="tl done"><b>Derivado a Dirección de Servicios Académicos</b><p>20/10/2026 11:02</p></div>
+        <div class="tl now"><b>Observado</b><p>21/10/2026 15:40 · "La foto adjunta no cumple el fondo blanco". Tienes 2 días hábiles para subsanar.</p></div>
+        <div class="tl"><b>Emisión del certificado</b><p>Pendiente</p></div>
+        <div class="tl"><b>Listo para descargar con QR</b><p>Pendiente</p></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Plazo legal</h3>
+        <div class="clock"><div class="ring"><span>3/7</span></div><div><b>Quedan 4 días hábiles</b><p class="sub" style="margin:2px 0 0">Plazo total: 7 días hábiles según TUPA. El reloj se pausa mientras el trámite está observado.</p></div></div>
+      </div>
+      <div class="card mt">
+        <h3>Subsanar observación</h3>
+        <p class="sub">Corrige solo lo observado. Tu expediente conserva el mismo número.</p>
+        <input type="file" style="font-size:12px"><br>
+        <button class="btn sm mt" onclick="toast('Corrección enviada. El trámite vuelve a la oficina y se te notificará.')">Enviar corrección</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. AVISOS -->
+<section id="avisos" class="screen">
+  <h2>Avisos automáticos</h2>
+  <p class="sub">Así llega el aviso cuando tu trámite cambia de estado. Tú eliges el canal.</p>
+  <div class="grid g3">
+    <div class="phone">
+      <div class="top">TUPA UNSAAC · cuenta verificada</div>
+      <div class="bubble">📄 <b>Trámite registrado</b><br>EXP-2026-004812 · Certificado de estudios. Pago confirmado. Plazo: 7 días hábiles.<small>09:14</small></div>
+      <div class="bubble">➡️ Tu trámite pasó a <b>Dirección de Servicios Académicos</b>.<small>11:02</small></div>
+      <div class="bubble">⚠️ <b>Observación:</b> la foto no cumple el fondo blanco. Subsana aquí: tupa.unsaac/e/4812 (plazo: 23/10).<small>15:40</small></div>
+    </div>
+    <div class="mail">
+      <div class="h"><b>De:</b> notificaciones@tupa-unsaac<br><b>Asunto:</b> [EXP-2026-004812] Tu trámite fue observado</div>
+      Hola, tu solicitud de <b>Certificado de estudios</b> fue observada por la Dirección de Servicios Académicos.<br><br>
+      <b>Motivo:</b> la foto adjunta no cumple el fondo blanco.<br><b>Plazo para subsanar:</b> 23/10/2026.<br><br>
+      <button class="btn sm" onclick="go('seguimiento')">Subsanar ahora</button>
+    </div>
+    <div class="card">
+      <h3>Mis preferencias</h3>
+      <div class="toggle"><span>Correo institucional</span><div class="sw" onclick="this.classList.toggle('off')"></div></div>
+      <div class="toggle"><span>WhatsApp</span><div class="sw" onclick="this.classList.toggle('off')"></div></div>
+      <div class="toggle"><span>Notificación en el navegador</span><div class="sw off" onclick="this.classList.toggle('off')"></div></div>
+      <label>Avisarme cuando…</label>
+      <div style="font-size:13px;line-height:1.9">☑ se registre o confirme el pago<br>☑ pase a otra oficina<br>☑ haya una observación<br>☑ falten 2 días para un plazo<br>☑ esté listo para descargar</div>
+      <p class="note">Acepto que mi número se use solo para avisos de mis trámites (Ley N.° 29733).</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. LOGIN OFICINA -->
+<section id="login" class="screen">
+  <div class="card" style="max-width:420px;margin:30px auto">
+    <h2>Acceso para oficinas</h2>
+    <p class="sub">Personal administrativo de la UNSAAC</p>
+    <label>Correo institucional</label><input class="f" value="servicios.academicos@unsaac.edu.pe">
+    <label>Contraseña</label><input class="f" type="password" value="12345678">
+    <button class="btn" style="width:100%;margin-top:18px" onclick="go('bandeja')">Ingresar</button>
+    <p class="note">Prototipo: no valida credenciales. La plataforma usa JWT y roles (estudiante, oficina, administrador).</p>
+  </div>
+</section>
+
+<!-- 9. BANDEJA -->
+<section id="bandeja" class="screen">
+  <div class="row" style="justify-content:space-between"><div><h2>Bandeja · Dirección de Servicios Académicos</h2><p class="sub">Ordenada por vencimiento del plazo legal</p></div><button class="btn ghost sm" onclick="go('dashboard')">Ver reportes →</button></div>
+  <div class="grid g4">
+    <div class="card kpi"><span>Pendientes</span><b>18</b></div>
+    <div class="card kpi"><span>Por vencer (≤ 1 día)</span><b style="color:var(--warn)">4</b></div>
+    <div class="card kpi"><span>Vencidos</span><b style="color:var(--bad)">1</b></div>
+    <div class="card kpi"><span>Atendidos hoy</span><b style="color:var(--ok)">9</b></div>
+  </div>
+  <div class="card mt" style="overflow-x:auto">
+    <table>
+      <tr><th>Plazo</th><th>Expediente</th><th>Procedimiento</th><th>Estado</th><th class="right">Acciones</th></tr>
+      <tr><td><span class="dot" style="background:var(--bad)"></span>Vencido</td><td>EXP-004790</td><td>Certificado de estudios</td><td><span class="chip info">En revisión</span></td><td class="right"><button class="btn ok sm" onclick="toast('Aprobado. Se avisó al estudiante por correo y WhatsApp.')">Aprobar</button></td></tr>
+      <tr><td><span class="dot" style="background:var(--warn)"></span>1 día</td><td>EXP-004801</td><td>Convalidación de asignaturas</td><td><span class="chip info">En revisión</span></td><td class="right"><button class="btn info sm" onclick="toast('Derivado a Escuela Profesional. El estudiante recibió el aviso.')">Derivar</button></td></tr>
+      <tr><td><span class="dot" style="background:var(--warn)"></span>1 día</td><td>EXP-004812</td><td>Certificado de estudios</td><td><span class="chip warn">Observado</span></td><td class="right"><button class="btn ghost sm" onclick="toast('Esperando subsanación del estudiante (reloj pausado).')">Ver</button></td></tr>
+      <tr><td><span class="dot" style="background:var(--ok)"></span>5 días</td><td>EXP-004830</td><td>Ficha de seguimiento académico</td><td><span class="chip">Registrado</span></td><td class="right"><button class="btn warn sm" onclick="toast('Observación registrada con plantilla. Se notificó al estudiante.')">Observar</button></td></tr>
+      <tr><td><span class="dot" style="background:var(--ok)"></span>6 días</td><td>EXP-004835</td><td>Certificado de estudios</td><td><span class="chip">Registrado</span></td><td class="right"><button class="btn bad sm" onclick="toast('Denegado con motivo. Se notificó al estudiante.')">Denegar</button></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 10. DASHBOARD -->
+<section id="dashboard" class="screen">
+  <h2>Reportes y estadísticas</h2>
+  <p class="sub">Octubre 2026 · todas las oficinas (datos de ejemplo)</p>
+  <div class="grid g4">
+    <div class="card kpi"><span>Trámites recibidos</span><b>412</b></div>
+    <div class="card kpi"><span>Atendidos en plazo</span><b style="color:var(--ok)">87 %</b></div>
+    <div class="card kpi"><span>Tiempo promedio</span><b>3,4 d</b></div>
+    <div class="card kpi"><span>Observados</span><b style="color:var(--warn)">11 %</b></div>
+  </div>
+  <div class="grid g2 mt">
+    <div class="card bars"><h3>Trámites más solicitados</h3>
+      <div class="row"><span>Constancia de matrícula</span><div class="tr"><i style="width:92%"></i></div><b>148</b></div>
+      <div class="row"><span>Certificado de estudios</span><div class="tr"><i style="width:65%"></i></div><b>104</b></div>
+      <div class="row"><span>Ficha de seguimiento</span><div class="tr"><i style="width:44%"></i></div><b>71</b></div>
+      <div class="row"><span>Convalidación</span><div class="tr"><i style="width:30%"></i></div><b>48</b></div>
+      <div class="row"><span>Grado de bachiller</span><div class="tr"><i style="width:25%"></i></div><b>41</b></div>
+    </div>
+    <div class="card bars"><h3>Tiempo promedio por oficina (días)</h3>
+      <div class="row"><span>Trámite Documentario</span><div class="tr"><i style="width:20%;background:var(--ok)"></i></div><b>1,2</b></div>
+      <div class="row"><span>Servicios Académicos</span><div class="tr"><i style="width:55%;background:var(--warn)"></i></div><b>3,9</b></div>
+      <div class="row"><span>Escuelas profesionales</span><div class="tr"><i style="width:70%;background:var(--warn)"></i></div><b>4,8</b></div>
+      <div class="row"><span>Facultades</span><div class="tr"><i style="width:88%;background:var(--bad)"></i></div><b>6,1</b></div>
+      <div class="mt"><button class="btn ghost sm" onclick="toast('Reporte exportado (simulado).')">Exportar CSV</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. VERIFICAR -->
+<section id="verificar" class="screen">
+  <h2>Verificar autenticidad de un documento</h2>
+  <p class="sub">Escanea el código QR del documento o ingresa su código de verificación. No necesitas cuenta.</p>
+  <div class="grid g2">
+    <div class="card row" style="gap:18px;align-items:flex-start">
+      <div class="qr"></div>
+      <div style="flex:1;min-width:180px">
+        <label style="margin-top:0">Código de verificación</label>
+        <input class="f" id="cv" value="UNSAAC-7F3A-91C2-D004">
+        <button class="btn mt" onclick="document.getElementById('res').style.display='block'">Verificar</button>
+      </div>
+    </div>
+    <div id="res" class="card" style="display:none;border-color:var(--ok)">
+      <span class="chip ok">✓ Documento auténtico</span>
+      <div class="req mt"><span>Documento</span><b>Constancia de matrícula</b></div>
+      <div class="req"><span>Expediente</span><b>EXP-2026-004851</b></div>
+      <div class="req"><span>Emitido</span><b>22/10/2026 · Trámite Documentario</b></div>
+      <div class="req"><span>Integridad</span><b>Firma criptográfica válida</b></div>
+    </div>
+  </div>
+</section>
+
+</div>
+<footer>Prototipo dinámico · Plataforma Web para la Optimización de la Gestión del TUPA · Desarrollo de Software I 2026-II · Datos de ejemplo</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const PROC=[
+ {n:"Constancia de matrícula",c:"Constancias",o:"Unidad de Trámite Documentario",p:"S/ 16.00",d:"3 días hábiles",k:"auto"},
+ {n:"Constancia de estudios",c:"Constancias",o:"Unidad de Trámite Documentario",p:"S/ 16.00",d:"3 días hábiles",k:"auto"},
+ {n:"Constancia de tercio / quinto superior",c:"Constancias",o:"Dirección de Servicios Académicos",p:"S/ 20.00",d:"5 días hábiles",k:"eval"},
+ {n:"Certificado de estudios",c:"Certificados",o:"Dirección de Servicios Académicos",p:"S/ 38.00",d:"7 días hábiles",k:"eval"},
+ {n:"Ficha de seguimiento académico",c:"Certificados",o:"Centro de Cómputo",p:"S/ 10.00",d:"1 día hábil",k:"auto"},
+ {n:"Grado académico de bachiller",c:"Grados y títulos",o:"Facultad → Consejo Universitario",p:"Según TUPA",d:"30 días hábiles",k:"eval"},
+ {n:"Título profesional",c:"Grados y títulos",o:"Facultad → Consejo Universitario",p:"Según TUPA",d:"30 días hábiles",k:"eval"},
+ {n:"Convalidación de asignaturas",c:"Matrícula",o:"Escuela Profesional",p:"S/ 15.00",d:"10 días hábiles",k:"eval"},
+ {n:"Reserva de matrícula",c:"Matrícula",o:"Dirección de Servicios Académicos",p:"S/ 20.00",d:"5 días hábiles",k:"eval"}
+];
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+function lev(a,b){const m=[];for(let i=0;i<=b.length;i++)m[i]=[i];for(let j=0;j<=a.length;j++)m[0][j]=j;
+ for(let i=1;i<=b.length;i++)for(let j=1;j<=a.length;j++)m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(b[i-1]==a[j-1]?0:1));return m[b.length][a.length];}
+function coincide(p,q){if(!q)return true;const w=norm(p.n+" "+p.c).split(/\s+/);
+ return norm(q).split(/\s+/).filter(Boolean).every(t=>w.some(x=>x.includes(t)||lev(x,t)<=Math.max(1,Math.floor(t.length/5))));}
+let cat="";
+function filtrar(q,c){if(c!==undefined)cat=c;const el=document.getElementById("lista");
+ const r=PROC.filter(p=>coincide(p,q)&&(!cat||p.c===cat));
+ el.innerHTML=r.length?r.map(p=>`<div class="card click" onclick="go('detalle')"><h3>${p.n}</h3><div class="sub" style="margin:0">${p.o}</div>
+ <div class="chips"><span class="chip">${p.p}</span><span class="chip info">${p.d}</span>${p.k=="auto"?'<span class="chip ok">Aprobación automática</span>':'<span class="chip warn">Evaluación previa</span>'}</div></div>`).join("")
+ :'<div class="card">No encontramos ese trámite. Prueba con otra palabra.</div>';}
+function buscar(q){document.getElementById("q2").value=q;filtrar(q);go("catalogo");}
+function go(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.go===id));window.scrollTo(0,0);}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.go));
+function paso(n){for(let i=1;i<=4;i++){document.getElementById("p"+i).style.display=i==n?"block":"none";
+ document.getElementById("s"+i).className=i<n?"done":(i==n?"now":"");}}
+function validarPago(){document.getElementById("pagoOk").style.display="inline-block";toast("Pago validado automáticamente con recaudación.");}
+function enviar(){paso(1);go("confirmacion");toast("Aviso enviado por correo y WhatsApp.");}
+let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2800);}
+filtrar("");
+</script>
+</body>
+</html>
